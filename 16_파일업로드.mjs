@@ -5,6 +5,9 @@ import fs from "fs";
 const app = express();
 const port = 3000;
 
+// 미들웨어 설정
+app.use(express.static("public")); // 정적 파일 제공
+
 /* 
    multer.diskStorage: 디스크(로컬 폴더)에 파일을 저장하는 방식을 설정하는 함수
    destination : 파일을 어느 폴더에 저장할지 설정
