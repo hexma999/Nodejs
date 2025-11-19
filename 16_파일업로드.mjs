@@ -39,7 +39,10 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+}); // 같은 이름이면 storage 로 생략가능 ,10M 로 파일용량 제한
 
 // ── 단일 파일 업로드 엔드포인트 ──
 // POST /upload-single
