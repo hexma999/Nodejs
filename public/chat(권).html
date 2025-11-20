@@ -60,50 +60,11 @@
         display: flex;
         flex-direction: column;
       }
+
       #chat,
       .chat-container,
       .chat-main {
         min-height: 0;
-      }
-      #users {
-        width: 250px;
-        border-left: 1px solid #ccc;
-        padding: 0.75rem;
-        background: #f9fafb;
-        font-size: 0.85rem;
-      }
-      #users h4 {
-        margin: 0 0 0.5rem;
-      }
-      #userCounts {
-        padding: 0.5rem;
-        margin-bottom: 0.5rem;
-        border-radius: 6px;
-        background: beige;
-        border: 1px solid #e5e7eb;
-        line-height: 1.4;
-      }
-      #userCounts strong {
-        display: block;
-        margin-bottom: 0.25rem;
-        font-size: 0.8rem;
-      }
-      #userList > div {
-        padding: 0.25rem 0.2rem;
-        border-bottom: 1px dashed #e5e7eb;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        cursor: pointer;
-      }
-      #userList > div:last-child {
-        border-bottom: none;
-      }
-      #userList > div:hover {
-        background: #f3f4f6;
-      }
-      #userList strong {
-        font-size: 0.85rem;
       }
     </style>
   </head>
@@ -145,27 +106,55 @@
         <span>😣</span>
       </div>
     </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
       const socket = io();
+
       const nickname = localStorage.getItem("nickname");
       let currentChannel = localStorage.getItem("channel");
+
       if (!nickname || !currentChannel) {
         alert("닉네임 또는 채널 정보가 없습니다.");
         location.href = "chat_index.html";
       }
-      const channelName = document.getElementById("channelName");
-      const messages = document.getElementById("messages");
-      const users = document.getElementById("userList");
-      const userCounts = document.getElementById("userCounts");
-      const messageInput = document.getElementById("message");
-      const toInput = document.getElementById("to");
-      const emojiBtn = document.getElementById("emoji");
-      const emojiBox = document.getElementById("emojiBox");
+
       const channelSelector = document.getElementById("channelSelector");
       channelSelector.value = currentChannel;
-      channelName.textContent = `[채널: ${currentChannel}]`;
-      document.getElementById("send").onclick = sendMessage;
+
+      const channelName = document.getElementById("channelName");
+      channelName.textContent = `[채널:${currentChannel}]`;
+
+      const emojiBtn = document.getElementById("emoji");
+      const emojiBox = document.getElementById("emojiBox");
+      emojiBtn.onclick = () => {
+        emojiBox.style.display =
+          emojiBox.style.display === "block" ? "none" : "block";
+        emojiBox.style.top = emojiBtn.offsetTop - 50 + "px";
+        emojiBox.style.left = emojiBtn.offsetLeft + 3 + "px";
+      };
+
+      channelSelector.onchange = () => {
+        const newChannel = channelSelector.value;
+        if (newChannel !== currentChannel) {
+          currentChannel = newChannel;
+          channelName.textContent = `[채널:]${currentChannel}`;
+          messages.innerHTML = "";
+          socket.emit("changeChannel", { newChannel });
+        }
+      };
+
+      const messageInput = document.getElementById("message");
+      const messages = document.getElementById("messages");
+      emojiBox.querySelectorAll("span").forEach((span) => {
+        span.onclick = () => {
+          messageInput.value += span.textContent;
+          emojiBox.style.display = "none";
+        };
+      });
+      socket.emit("join", { nickname, channel: currentChannel });
+
+      const toInput = document.getElementById("to");
       function sendMessage() {
         const text = messageInput.value.trim();
         const to = toInput.value.trim();
@@ -174,69 +163,50 @@
           messageInput.value = "";
         }
       }
+
+      document.getElementById("send").onclick = sendMessage;
       messageInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") sendMessage();
+        if (e.key == "Enter") sendMessage();
       });
-      channelSelector.onchange = () => {
-        const newChannel = channelSelector.value;
-        if (newChannel !== currentChannel) {
-          socket.emit("changeChannel", { newChannel });
-          currentChannel = newChannel;
-          channelName.textContent = `[채널: ${currentChannel}]`;
-          messages.innerHTML = "";
-          localStorage.setItem("channel", currentChannel);
-        }
-      };
-      emojiBtn.onclick = () => {
-        emojiBox.style.display =
-          emojiBox.style.display === "block" ? "none" : "block";
-        emojiBox.style.top = emojiBtn.offsetTop - 50 + "px";
-        emojiBox.style.left = emojiBtn.offsetLeft + 0 + "px";
-      };
-      emojiBox.querySelectorAll("span").forEach((span) => {
-        span.onclick = () => {
-          messageInput.value += span.textContent;
-          emojiBox.style.display = "none";
-        };
-      });
-      socket.emit("join", { nickname, channel: currentChannel });
+
+      /* 이벤트 */
       socket.on("message", ({ user, text }) => {
-        console.log("user: ", user, "text: ", text);
+        console.log("user:", user, "text:", text);
         const div = document.createElement("div");
         div.textContent = `[${user}] ${text}`;
-        if (user === "system") div.className = "system-msg";
+        if (user == "system") div.className = "system-msg";
         messages.appendChild(div);
+
         messages.scrollTop = messages.scrollHeight;
       });
+
+      socket.on("whisper", ({ user, text }) => {
+        const div = document.createElement("div");
+        div.textContent = `(귓속말)[${user}] ${text}`;
+        div.style.color = "deeppink";
+        messages.appendChild(div);
+
+        messages.scrollTop = messages.scrollHeight;
+      });
+
+      const users = document.getElementById("users");
+      const userCounts = document.getElementById("userCounts");
       socket.on("userList", (list) => {
-        users.innerHTML = "";
+        //users.innerHTML = "";
         const channelMap = {};
+
         list.forEach(({ nickname, channel }) => {
           const div = document.createElement("div");
-          div.innerHTML = `<span class="online-dot"></span><strong>${nickname}</strong> (${channel})`;
+          div.innerHTML = `<span class="online-dot"></span><string>${nickname}</string>(${channel})`;
           users.appendChild(div);
-          div.onclick = () => {
-            if (toInput.value === nickname) {
-              toInput.value = "";
-            } else {
-              toInput.value = nickname;
-            }
-          };
+
           if (!channelMap[channel]) channelMap[channel] = 0;
           channelMap[channel]++;
         });
+
         userCounts.innerHTML =
-          "<strong>채널별 접속자 수</strong><br>" +
-          Object.entries(channelMap)
-            .map(([ch, count]) => `${ch}: ${count}명`)
-            .join("<br>");
-      });
-      socket.on("whisper", ({ user, text }) => {
-        const div = document.createElement("div");
-        div.textContent = `(귓속말) [${user}] ${text}`;
-        div.style.color = "deeppink";
-        messages.appendChild(div);
-        messages.scrollTop = messages.scrollHeight;
+          "<string>채널별 접속자 수</string>" + Object.entries(channelMap);
+        map((ch, count) => `${ch}:${count}명`).join("<br>");
       });
     </script>
   </body>

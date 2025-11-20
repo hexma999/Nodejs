@@ -1,5 +1,5 @@
 import express from "express";
-import path, { join } from "path";
+import path from "path";
 import { createServer } from "http";
 import fs from "fs";
 import { Server } from "socket.io";
@@ -61,7 +61,6 @@ io.on("connection", (socket) => {
       io.to(user.channel).emit("message", msg);
       delete users[socket.id];
     }
-
     updateUserList();
   });
   function updateUserList() {
