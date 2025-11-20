@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>채팅방</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 0;
+        display: flex;
+        height: 100vh;
+      }
+      #chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+      }
+      #messages {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 0.5rem;
+      }
+      #users {
+        width: 250px;
+        border-left: 1px solid #ccc;
+        padding: 0.5rem;
+      }
+      #emojiBox {
+        display: none;
+        border: 1px solid #ccc;
+        padding: 0.5rem;
+        position: absolute;
+        background: white;
+      }
+      #emojiBox span {
+        cursor: pointer;
+        padding: 0.3rem;
+      }
+      .system-msg {
+        color: gray;
+        font-style: italic;
+      }
+      .online-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: green;
+        margin-right: 5px;
+      }
+      .chat-container {
+        display: flex;
+        flex: 1;
+      }
+      .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #chat,
+      .chat-container,
+      .chat-main {
+        min-height: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chat">
+      <h3 id="channelName"></h3>
+      <div class="chat-container">
+        <div class="chat-main">
+          <div id="messages"></div>
+          <div>
+            <input type="text" id="to" placeholder="귓속말 대상(없으면 전체)" />
+            <input type="text" id="message" placeholder="메시지를 입력하세요" />
+            <select id="channelSelector">
+              <option value="lobby">대기실</option>
+              <option value="sports">스포츠</option>
+              <option value="programming">프로그래밍</option>
+              <option value="music">음악</option>
+            </select>
+            <button id="emoji">😁</button>
+            <button id="send">전송</button>
+          </div>
+        </div>
+        <div id="users">
+          <h4>접속자 목록</h4>
+          <div id="userCounts"></div>
+          <div id="userList"></div>
+        </div>
+      </div>
+      <div id="emojiBox">
+        <span>😁</span>
+        <span>😂</span>
+        <span>🤣</span>
+        <span>😃</span>
+        <span>😆</span>
+        <span>😎</span>
+        <span>😐</span>
+        <span>😑</span>
+        <span>🙄</span>
+        <span>😣</span>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+
+      const nickname = localStorage.getItem("nickname");
+      let currentChannel = localStorage.getItem("channel");
+
+      socket.emit("join", { nickname, channel: currentChannel });
+
+      if (!nickname || !currentChannel) {
+        alert("닉네임 또는 채널 정보가 없습니다.");
+        location.href = "chat_index.html";
+      }
+
+      const channelSelector = document.getElementById("channelSelector");
+      channelSelector.value = currentChannel;
+
+      const channelName = document.getElementById("channelName");
+      channelName.textContent = `[채널:${currentChannel}]`;
+
+      const emojiBtn = document.getElementById("emoji");
+      const emojiBox = document.getElementById("emojiBox");
+      emojiBtn.onclick = () => {
+        emojiBox.style.display =
+          emojiBox.style.display === "block" ? "none" : "block";
+        emojiBox.style.top = emojiBtn.offsetTop - 50 + "px";
+        emojiBox.style.left = emojiBtn.offsetLeft + 3 + "px";
+      };
+
+      const messageInput = document.getElementById("message");
+      const messages = document.getElementById("messages");
+      emojiBox.querySelectorAll("span").forEach((span) => {
+        span.onclick = () => {
+          messageInput.value += span.textContent;
+          emojiBox.style.display = "none";
+        };
+      });
+
+      const toInput = document.getElementById("to");
+      function sendMessage() {
+        const text = messageInput.value.trim();
+        const to = toInput.value.trim();
+        if (text) {
+          socket.emit("chat", { text, to: to || null });
+          messageInput.value = "";
+        }
+      }
+
+      document.getElementById("send").onclick = sendMessage;
+      messageInput.addEventListener("keydown", (e) => {
+        if (e.key == "Enter") sendMessage();
+      });
+
+      /* 이벤트 */
+      socket.on("message", ({ user, text }) => {
+        console.log("user:", user, "text:", text);
+        const div = document.createElement("div");
+        div.textContent = `[${user}] ${text}`;
+        if (user == "system") div.className = "system-msg";
+        messages.appendChild(div);
+
+        messages.scrollTop = messages.scrollHeight;
+      });
+
+      socket.on("whisper", ({ user, text }) => {
+        const div = document.createElement("div");
+        div.textContent = `(귓속말)[${user}] ${text}`;
+        div.style.color = "deeppink";
+        messages.appendChild(div);
+
+        messages.scrollTop = messages.scrollHeight;
+      });
+    </script>
+  </body>
+</html>

@@ -8,7 +8,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon 16_파일업로드.mjs"
+    "dev": "nodemon 19_SocketIo.mjs"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
@@ -20,7 +20,11 @@
     "express-session": "^1.18.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
+    "sharp": "^0.34.5",
+    "socket.io": "^4.8.1",
+    "soket.io": "^0.0.1-security",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "ws": "^8.18.3"
   }
 }
